@@ -22,6 +22,8 @@ from pathlib import Path
 
 import yaml
 
+from tts_utils.device import get_device
+
 
 def load_config(config_path: str) -> dict:
     return yaml.safe_load(Path(config_path).read_text())
@@ -52,12 +54,16 @@ def find_styletts2_and_training(cfg: dict, recipe_root: Path) -> tuple[Path, Pat
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", default="configs/config.yml")
-    ap.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
+    ap.add_argument("--device", default="auto", choices=["auto", "cuda", "xpu", "cpu"],
+                     help="Device to use. 'auto' detects best available (CUDA > XPU > CPU). Default: auto")
     ap.add_argument("--only", nargs="+", default=None,
                     help="Only evaluate these epoch numbers (e.g. --only 06 08 09)")
     ap.add_argument("--skip-existing", action="store_true",
                     help="Skip epochs that already have eval audio")
     args = ap.parse_args()
+
+    # Resolve device once so all epochs use the same device
+    resolved_device = get_device(args.device)
 
     cfg = load_config(args.config)
     recipe_root = Path(args.config).parent.parent.resolve()
@@ -122,7 +128,7 @@ def main():
         print("=" * 70)
 
         try:
-            _eval_one(ckpt, first_stage, out_dir, args.device, recipe_root, styletts2_dir, training_dir, cfg)
+            _eval_one(ckpt, first_stage, out_dir, resolved_device, recipe_root, styletts2_dir, training_dir, cfg)
         except Exception as e:
             print(f"  ! {tag} failed: {e}")
             failures.append(tag)

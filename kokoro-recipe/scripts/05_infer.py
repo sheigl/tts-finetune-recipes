@@ -40,7 +40,8 @@ def main():
                     help="Text to synthesize. Omit to enter interactive mode.")
     ap.add_argument("--out",        default="output.wav", help="Output WAV path")
     ap.add_argument("--speed",      type=float, default=1.0, help="Speaking speed (default: 1.0)")
-    ap.add_argument("--device",     default="cuda", choices=["cuda", "cpu"])
+    ap.add_argument("--device",     default="auto", choices=["auto", "cuda", "xpu", "cpu"],
+                     help="Device to use. 'auto' detects best available (CUDA > XPU > CPU). Default: auto")
     ap.add_argument("--recipe-root", default=None,
                     help="Path to the kokoro-recipe directory (auto-detected if omitted)")
     args = ap.parse_args()
@@ -61,6 +62,7 @@ def main():
     import torch
     import numpy as np
     import soundfile as sf
+    from tts_utils.device import get_device
     from kokoro import KModel, KPipeline
 
     scripts_dir = Path(__file__).parent
@@ -77,7 +79,7 @@ def main():
         g2p_lang = c.get("g2p", {}).get("language", "en-gb")
     lang_code = "b" if "gb" in g2p_lang else "a"
 
-    device = args.device if torch.cuda.is_available() else "cpu"
+    device = get_device(args.device)
 
     kmodel = KModel(repo_id="hexgrad/Kokoro-82M", config=str(config_path), model=str(ckpt_path))
     kmodel = kmodel.to(device).eval()

@@ -39,6 +39,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.parametrizations import spectral_norm
 
+from tts_utils.device import get_device
+
 
 # ── StyleTTS2 StyleEncoder (standalone, no external deps) ────────────────────
 
@@ -147,8 +149,7 @@ def extract_voicepack(
     import soundfile as sf
     import torchaudio
 
-    if device == "auto":
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device(device)
     print(f"Device: {device}")
 
     audio_files = sorted(Path(audio_dir).glob("*.wav"))
@@ -250,7 +251,8 @@ def main():
     ap.add_argument("--audio-dir",    required=True, help="Directory of speaker WAV files")
     ap.add_argument("--out",          required=True, help="Output voicepack path (.pt)")
     ap.add_argument("--num-samples",  type=int, default=200)
-    ap.add_argument("--device",       default="auto", choices=["auto", "cuda", "cpu"])
+    ap.add_argument("--device",       default="auto", choices=["auto", "cuda", "xpu", "cpu"],
+                     help="Device to use. 'auto' detects best available (CUDA > XPU > CPU). Default: auto")
     args = ap.parse_args()
     extract_voicepack(
         model_path=args.model,

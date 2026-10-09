@@ -610,7 +610,7 @@ class Decoder(nn.Module):
                 F0_curve = (
                     nn.functional.conv1d(
                         F0_curve.unsqueeze(1),
-                        torch.ones(1, 1, F0_down).to("cuda"),
+                        torch.ones(1, 1, F0_down, device=F0_curve.device),
                         padding=F0_down // 2,
                     ).squeeze(1)
                     / F0_down
@@ -619,7 +619,7 @@ class Decoder(nn.Module):
                 N = (
                     nn.functional.conv1d(
                         N.unsqueeze(1),
-                        torch.ones(1, 1, N_down).to("cuda"),
+                        torch.ones(1, 1, N_down, device=N.device),
                         padding=N_down // 2,
                     ).squeeze(1)
                     / N_down

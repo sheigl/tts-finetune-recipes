@@ -487,13 +487,8 @@ def generate_sample_audio(model, val_ds, audio_vae, writer, step, accelerator, s
             unwrapped_model.audio_vae = audio_vae.to(torch.float32)
             
             log(f"[Audio] Generating sample {i} with text: '{text[:50]}...'")
-            autocast_ctx = (
-                torch.autocast(device_type="cuda", dtype=torch.bfloat16)
-                if torch.cuda.is_available()
-                else contextlib.nullcontext()
-            )
             with torch.no_grad():
-                with autocast_ctx:
+                with accelerator.autocast(dtype=torch.bfloat16):
                     generated = unwrapped_model.generate(target_text=text, inference_timesteps=10, cfg_value=2.0)
             
             # Restore training setup

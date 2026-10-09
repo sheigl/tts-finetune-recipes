@@ -17,6 +17,8 @@ from pathlib import Path
 import torch
 import torchaudio
 
+from tts_utils.device import get_device
+
 from TTS.tts.configs.xtts_config import XttsConfig
 from TTS.tts.models.xtts import Xtts
 
@@ -34,7 +36,11 @@ def parse_args():
     ap.add_argument("--vocab", default=None,
                     help="Path to vocab.json (auto-detected from config if omitted).")
     ap.add_argument("--out", default="output.wav", help="Output WAV path (default: output.wav).")
-    ap.add_argument("--cpu", action="store_true", help="Force CPU inference.")
+    ap.add_argument("--device", default="auto", choices=["auto", "cuda", "xpu", "cpu"],
+                    help="Device to use. 'auto' detects best available (CUDA > XPU > CPU). "
+                         "--device cpu is equivalent to --cpu. Default: auto")
+    ap.add_argument("--cpu", action="store_true",
+                    help="(Deprecated) Force CPU inference. Use --device cpu instead.")
     return ap.parse_args()
 
 
@@ -61,7 +67,7 @@ def main():
         print("[ERROR] Cannot find vocab.json — pass --vocab explicitly.", file=sys.stderr)
         sys.exit(1)
 
-    device = "cpu" if args.cpu or not torch.cuda.is_available() else "cuda"
+    device = get_device("cpu") if args.cpu else get_device(args.device)
     print(f"[info] Device: {device}")
     print(f"[info] Checkpoint: {ckpt_path}")
     print(f"[info] Reference: {ref_path}")

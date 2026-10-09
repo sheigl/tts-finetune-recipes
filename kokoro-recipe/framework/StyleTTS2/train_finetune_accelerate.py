@@ -30,6 +30,11 @@ from Modules.diffusion.sampler import DiffusionSampler, ADPM2Sampler, KarrasSche
 
 from optimizers import build_optimizer
 
+import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
+from tts_utils.device import empty_cache
+
 from accelerate import Accelerator
 
 accelerator = Accelerator()
@@ -223,7 +228,7 @@ def main(config_path):
     iters = 0
     
     criterion = nn.L1Loss() # F0 loss (regression)
-    torch.cuda.empty_cache()
+    empty_cache(device)
     
     stft_loss = MultiResolutionSTFTLoss().to(device)
     
@@ -584,9 +589,9 @@ def main(config_path):
                     batch = [b.to(device) for b in batch[1:]]
                     texts, input_lengths, ref_texts, ref_lengths, mels, mel_input_length, ref_mels = batch
                     with torch.no_grad():
-                        mask = length_to_mask(mel_input_length // (2 ** n_down)).to('cuda')
-                        text_mask = length_to_mask(input_lengths).to(texts.device)
+                        mask = length_to_mask(mel_input_length // (2 ** n_down)).to(device)
 
+                        text_mask = length_to_mask(input_lengths).to(texts.device)
                         _, _, s2s_attn = model.text_aligner(mels, mask, texts)
                         s2s_attn = s2s_attn.transpose(-1, -2)
                         s2s_attn = s2s_attn[..., 1:]

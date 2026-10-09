@@ -43,6 +43,11 @@ from utils import *
 from Modules.slmadv import SLMAdversarialLoss
 from Modules.diffusion.sampler import DiffusionSampler, ADPM2Sampler, KarrasSchedule
 
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', '..'))
+from tts_utils.device import get_device, empty_cache
+
 from optimizers import build_optimizer
 
 
@@ -67,7 +72,12 @@ logger.addHandler(handler)
 
 @click.command()
 @click.option("-p", "--config_path", default="Configs/config.yml", type=str)
-def main(config_path):
+@click.option(
+    "-d", "--device", default="auto",
+    choices=["auto", "cuda", "xpu", "cpu"],
+    help="Device to use. 'auto' detects best available (CUDA > XPU > CPU). Default: auto"
+)
+def main(config_path, device):
     config = yaml.safe_load(open(config_path))
 
     log_dir = config["log_dir"]
@@ -109,7 +119,7 @@ def main(config_path):
     optimizer_params = Munch(config["optimizer_params"])
 
     train_list, val_list = get_data_path_list(train_path, val_path)
-    device = "cuda"
+    device = get_device(device)
 
     train_dataloader = build_dataloader(
         train_list,
@@ -278,7 +288,7 @@ def main(config_path):
     iters = 0
 
     criterion = nn.L1Loss()  # F0 loss (regression)
-    torch.cuda.empty_cache()
+    empty_cache(device)
 
     stft_loss = MultiResolutionSTFTLoss().to(device)
 
@@ -569,7 +579,7 @@ def main(config_path):
             except RuntimeError as _oom:
                 if "out of memory" in str(_oom):
                     print("OOM in decoder — skipping batch")
-                    torch.cuda.empty_cache()
+                    empty_cache(device)
                     continue
                 raise
 
@@ -594,7 +604,7 @@ def main(config_path):
                 if "out of memory" in str(_oom):
                     print("OOM in stft_loss — skipping batch")
                     optimizer.zero_grad()
-                    torch.cuda.empty_cache()
+                    empty_cache(device)
                     continue
                 raise
 
